@@ -1,0 +1,78 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'ACTION', choices: ['plan', 'apply', 'destroy'], description: 'Select Terraform Action')
+        string(name: 'COMPONENT', defaultValue: 'network', description: 'Terraform component to manage')
+    }
+
+    environment {
+        TF_PATH = "terraform/${params.COMPONENT}"
+        AWS_REGION = "us-east-1" 
+        // Use Jenkins Credentials Provider for these:
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key')
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/your-repo/infrastructure.git'
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                dir("${TF_PATH}") {
+                    sh 'terraform init'
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                dir("${TF_PATH}") {
+                    sh 'terraform plan -out=tfplan'
+                }
+            }
+        }
+
+        stage('Approval Gate') {
+            // Only ask for approval if we are NOT just planning
+            when {
+                expression { params.ACTION == 'apply' || params.ACTION == 'destroy' }
+            }
+            steps {
+                input message: "Are you sure you want to ${params.ACTION} the ${params.COMPONENT} infrastructure?", ok: "Proceed"
+            }
+        }
+
+        stage('Terraform Execution') {
+            steps {
+                dir("${TF_PATH}") {
+                    script {
+                        if (params.ACTION == 'apply') {
+                            sh 'terraform apply -auto-approve tfplan'
+                        } else if (params.ACTION == 'destroy') {
+                            sh 'terraform destroy -auto-approve'
+                        } else {
+                            echo "Skipping execution. Plan only."
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs() // Keeps your t2.2xlarge storage clean
+        }
+        success {
+            echo "Terraform ${params.ACTION} completed successfully!"
+        }
+        failure {
+            echo "Infrastructure deployment failed. Check the logs."
+        }
+    }
+}

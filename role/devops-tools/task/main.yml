@@ -1,0 +1,117 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    force_apt_get: yes
+
+- name: Install Prerequisite Packages
+  apt:
+    name:
+      - openjdk-17-jre
+      - openjdk-17-jdk
+      - unzip
+      - wget
+      - apt-transport-https
+      - gnupg
+      - lsb-release
+    state: present
+
+- name: Setup Jenkins Repository
+  block:
+    - name: Add Jenkins GPG key
+      get_url:
+        url: https://pkg.jenkins.io/debian/jenkins.io-2023.key
+        dest: /usr/share/keyrings/jenkins-keyring.asc
+
+    - name: Add Jenkins repo
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian binary/"
+        state: present
+        filename: jenkins
+
+- name: Install Jenkins
+  apt:
+    name: jenkins
+    state: present
+
+- name: Install Docker and Configure Permissions
+  block:
+    - name: Install Docker.io
+      apt:
+        name: docker.io
+        state: present
+    - name: Add users to docker group
+      user:
+        name: "{{ item }}"
+        groups: docker
+        append: yes
+      loop:
+        - jenkins
+        - ubuntu
+
+    - name: Ensure Docker socket permissions
+      file:
+        path: /var/run/docker.sock
+        mode: '0777'
+
+- name: Install AWS CLI
+  unarchive:
+    src: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+    dest: /tmp
+    remote_src: yes
+  register: aws_download
+
+- name: Run AWS CLI Installer
+  command: /tmp/aws/install --update
+  when: aws_download.changed
+
+- name: Install Kubectl
+  get_url:
+    url: "https://dl.k8s.io/release/v1.28.4/bin/linux/amd64/kubectl"
+    dest: /usr/local/bin/kubectl
+    mode: '0755'
+
+- name: Install eksctl
+  unarchive:
+    src: "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz"
+    dest: /usr/local/bin
+    remote_src: yes
+
+- name: Install Terraform
+  block:
+    - name: Add Hashicorp GPG key
+      apt_key:
+        url: https://apt.releases.hashicorp.com/gpg
+        state: present
+
+    - name: Add Hashicorp Repo
+      apt_repository:
+        repo: "deb https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+        state: present
+
+    - name: Install Terraform
+      apt:
+        name: terraform
+        state: present
+
+- name: Install Trivy
+  block:
+    - name: Add Trivy GPG key
+      apt_key:
+        url: https://aquasecurity.github.io/trivy-repo/deb/public.key
+        state: present
+
+    - name: Add Trivy Repo
+      apt_repository:
+        repo: "deb https://aquasecurity.github.io/trivy-repo/deb {{ ansible_distribution_release }} main"
+        state: present
+
+    - name: Install Trivy
+      apt:
+        name: trivy
+        state: present
+
+- name: Install Helm via Snap
+  snap:
+    name: helm
+    classic: yes
