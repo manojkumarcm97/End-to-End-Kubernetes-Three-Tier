@@ -1,19 +1,23 @@
-name: "Terraform Plan & Apply"
+name: "Terraform Workflow"
 
 on:
   workflow_dispatch:
     inputs:
-      confirm:
-        description: 'Type "PLAN" and "APPLY" and "DESTROY" to confirm'
+      terraform_action:
+        description: 'Select Terraform Action'
         required: true
-        default: 'PLAN'
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
 
 jobs:
   plan:
     name: "Terraform"
     runs-on: ubuntu-latest
     timeout-minutes: 20  # Automatically kills the job if it gets stuck
-    if: github.event.inputs.confirm == 'PLAN'
     defaults:
       run:
         working-directory: ./terraform
@@ -37,66 +41,13 @@ jobs:
         continue-on-error: true
 
       - name: Terraform Plan
-        id: plan
+        if: github.event.inputs.terraform_action == 'plan' || github.event.inputs.terraform_action == 'apply'
         run: terraform plan
 
-  plan-and-apply:
-    name: "Terraform"
-    runs-on: ubuntu-latest
-    timeout-minutes: 20  # Automatically kills the job if it gets stuck
-    if: github.event.inputs.confirm == 'APPLY'
-    defaults:
-      run:
-        working-directory: ./terraform
-    env:
-      # Map your secrets to environment variables
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Format Check
-        run: terraform fmt
-        continue-on-error: true
-
-      - name: Terraform Plan
-        id: plan
-        run: terraform plan 
-        continue-on-error: true
-
       - name: Terraform Apply
+        if: github.event.inputs.terraform_action == 'apply' 
         run: terraform apply -auto-approve
 
-  destroy:
-    name: "Destroy Infrastructure"
-    runs-on: ubuntu-latest
-    timeout-minutes: 20  # Automatically kills the job if it gets stuck
-    # Only run if the user typed "DESTROY" in the manual prompt
-    if: github.event.inputs.confirm == 'DESTROY'
-    defaults:
-      run:
-        working-directory: ./terraform
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Init
-        run: terraform init
-
       - name: Terraform Destroy
+        if: github.event.inputs.terraform_action == 'destroy'
         run: terraform destroy -auto-approve
