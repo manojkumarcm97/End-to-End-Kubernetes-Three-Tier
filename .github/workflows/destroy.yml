@@ -12,6 +12,7 @@ jobs:
   destroy:
     name: "Destroy Infrastructure"
     runs-on: ubuntu-latest
+    timeout-minutes: 20  # Automatically kills the job if it gets stuck
     # Only run if the user typed "DESTROY" in the manual prompt
     if: github.event.inputs.confirm == 'DESTROY'
     

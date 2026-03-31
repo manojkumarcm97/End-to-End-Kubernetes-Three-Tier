@@ -12,6 +12,8 @@ jobs:
   terraform:
     name: "Terraform"
     runs-on: ubuntu-latest
+    timeout-minutes: 20  # Automatically kills the job if it gets stuck
+    if: github.event.inputs.confirm == 'APPLY'
     defaults:
       run:
         working-directory: ./terraform
@@ -40,4 +42,4 @@ jobs:
         continue-on-error: true
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var-file="variable.tfvars"
