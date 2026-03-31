@@ -36,7 +36,7 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: terraform plan -no-color
+        run: terraform plan -var-file="variable.tfvars"
         continue-on-error: true
 
       - name: Terraform Apply
