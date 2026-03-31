@@ -24,10 +24,11 @@ jobs:
       - name: Login to Vault
         id: vault-login
         run: |
-          RESPONSE=$(curl --request POST \
-            --data "{\"role\":\"github-actions\",\"jwt\":\"$TOKEN\"}" \
-            http://127.0.0.1:8200/v1/auth/oidc/login)
+          RESPONSE=$(curl -s --request POST \
+          --header "Content-Type: application/json" \
+          --data "{\"role\":\"github-actions\",\"jwt\":\"$TOKEN\"}" \
 
+          https://abc123.ngrok-free.app/v1/auth/oidc/login)
           VAULT_TOKEN=$(echo $RESPONSE | jq -r '.auth.client_token')
           echo "VAULT_TOKEN=$VAULT_TOKEN" >> $GITHUB_ENV
 
