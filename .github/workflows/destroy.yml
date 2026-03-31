@@ -15,7 +15,9 @@ jobs:
     timeout-minutes: 20  # Automatically kills the job if it gets stuck
     # Only run if the user typed "DESTROY" in the manual prompt
     if: github.event.inputs.confirm == 'DESTROY'
-    
+    defaults:
+      run:
+        working-directory: ./terraform
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
