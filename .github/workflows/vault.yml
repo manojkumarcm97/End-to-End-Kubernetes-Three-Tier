@@ -26,7 +26,7 @@ jobs:
         run: |
           RESPONSE=$(curl --request POST \
             --data "{\"role\":\"github-actions\",\"jwt\":\"$TOKEN\"}" \
-            http://<YOUR-VAULT-IP>:8200/v1/auth/oidc/login)
+            http://127.0.0.1:8200/v1/auth/oidc/login)
 
           VAULT_TOKEN=$(echo $RESPONSE | jq -r '.auth.client_token')
           echo "VAULT_TOKEN=$VAULT_TOKEN" >> $GITHUB_ENV
@@ -35,7 +35,7 @@ jobs:
         run: |
           SECRET=$(curl \
             --header "X-Vault-Token: $VAULT_TOKEN" \
-            http://<YOUR-VAULT-IP>:8200/v1/secret/data/github/token \
+            http://127.0.0.1:8200/v1/secret/data/github/token \
             | jq -r '.data.data.value')
 
           echo "Secret is: $SECRET"
